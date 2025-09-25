@@ -1,0 +1,65 @@
+package umap.service
+
+import com.google.inject.ImplementedBy
+import com.microsoft.playwright.*
+import play.api.Logging
+import umap.model.GoogleDetails
+import umap.utils.CustomPlaywrightPage
+
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets.UTF_8
+import javax.inject.*
+import scala.concurrent.{ExecutionContext, Future}
+
+@ImplementedBy(classOf[GoogleServiceImpl])
+trait GoogleService {
+  def getDetailsFromGoogle(url: String)(implicit ec: ExecutionContext): Future[GoogleDetails]
+}
+
+@Singleton
+class GoogleServiceImpl extends GoogleService with Logging {
+  override def getDetailsFromGoogle(url: String)(implicit ec: ExecutionContext): Future[GoogleDetails] = {
+    Future {
+      val customPlaywright = CustomPlaywrightPage.preparePage()
+      implicit val page: Page = customPlaywright.page
+      try {
+        logger.debug("getting info from google page")
+        page.navigate(url)
+        logger.debug("rejecting cookies")
+        page.locator("button[aria-label='Reject all']").all().get(0).click()
+        val (lat, long) = getCoordinates(url)
+        val shareUrl = getShareUrl(page)
+        logger.debug("finished getting info from google page")
+        GoogleDetails(lat, long, getPlaceName(url), shareUrl)
+      }
+      catch {
+        case ex: Exception => {
+          ex.printStackTrace()
+          throw ex
+        }
+      }
+      finally {
+        customPlaywright.close()
+      }
+    }
+  }
+
+  private def getCoordinates(url: String): (String, String) = {
+    val pattern = "!3d([0-9.-]+)!4d([0-9.-]+)".r
+    pattern.findAllMatchIn(url).map(m => (m.group(1), m.group(2))).toList.head
+  }
+
+  private def getShareUrl(page: Page): String = {
+    logger.debug("get share url")
+    page.getByLabel("Share", new Page.GetByLabelOptions().setExact(true)).click()
+    page.locator("input[value*='maps.app.goo.gl']").inputValue()
+  }
+
+  private def getPlaceName(url: String): String = {
+    val placePattern = "/place/([^/@]+)".r
+    val placeNameOpt = placePattern.findFirstMatchIn(url).map { m =>
+      URLDecoder.decode(m.group(1).replace("+", " "), UTF_8)
+    }
+    placeNameOpt.getOrElse("Unknown place")
+  }
+}
