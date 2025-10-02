@@ -47,6 +47,9 @@ class UmapServiceImpl @Inject(val config: Configuration, val playwrightFactory: 
   }
 
   private def putName(name: String)(implicit page: Page): Unit = {
+    if (!page.locator("input[name='name']").isVisible()) {
+      addNewField("name")
+    }
     logger.debug(s"putting name $name")
     page.locator("input[name='name']").fill(name)
   }
@@ -63,7 +66,8 @@ class UmapServiceImpl @Inject(val config: Configuration, val playwrightFactory: 
     logger.debug(s"adding new field '$fieldName'")
     page.getByText("Add a new field").click()
     page.locator("input[name='prompt']").fill(fieldName)
-    page.getByText("OK").click()
+//    Thread.sleep("10000")
+    page.locator("input[name='prompt']").locator("..").locator("..").locator("..").getByText("OK").click()
   }
 
 
