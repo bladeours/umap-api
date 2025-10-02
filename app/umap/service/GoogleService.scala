@@ -2,9 +2,9 @@ package umap.service
 
 import com.google.inject.ImplementedBy
 import com.microsoft.playwright.*
-import play.api.Logging
+import play.api.{Configuration, Logging}
 import umap.model.GoogleDetails
-import umap.utils.CustomPlaywrightPage
+import umap.utils.CustomPlaywrightPageFactory
 
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets.UTF_8
@@ -17,31 +17,23 @@ trait GoogleService {
 }
 
 @Singleton
-class GoogleServiceImpl extends GoogleService with Logging {
-  override def getDetailsFromGoogle(url: String)(implicit ec: ExecutionContext): Future[GoogleDetails] = {
+class GoogleServiceImpl @Inject(val config: Configuration, val playwrightFactory: CustomPlaywrightPageFactory) extends GoogleService with Logging {
+  override def getDetailsFromGoogle(url: String)(implicit ec: ExecutionContext): Future[GoogleDetails] =
     Future {
-      val customPlaywright = CustomPlaywrightPage.preparePage()
-      implicit val page: Page = customPlaywright.page
-      try {
-        logger.debug("getting info from google page")
-        page.navigate(url)
-        logger.debug("rejecting cookies")
-        page.locator("button[aria-label='Reject all']").all().get(0).click()
-        val (lat, long) = getCoordinates(url)
-        val shareUrl = getShareUrl(page)
-        logger.debug("finished getting info from google page")
-        GoogleDetails(lat, long, getPlaceName(url), shareUrl)
-      }
-      catch {
-        case ex: Exception => {
-          ex.printStackTrace()
-          throw ex
-        }
-      }
-      finally {
-        customPlaywright.close()
+      playwrightFactory.withPageRetry { implicit page =>
+        getDetails(url)
       }
     }
+
+  private def getDetails(url: String)(implicit ec: ExecutionContext, page: Page): GoogleDetails = {
+    logger.debug("getting info from google page")
+    page.navigate(url)
+    logger.debug("rejecting cookies")
+    page.locator("button[aria-label='Reject all']").all().get(0).click()
+    val (lat, long) = getCoordinates(url)
+    val shareUrl = getShareUrl(page)
+    logger.debug("finished getting info from google page")
+    GoogleDetails(lat, long, getPlaceName(url), shareUrl)
   }
 
   private def getCoordinates(url: String): (String, String) = {

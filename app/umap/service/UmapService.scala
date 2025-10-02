@@ -5,44 +5,45 @@ import com.microsoft.playwright.*
 import com.microsoft.playwright.options.SelectOption
 import play.api.{Configuration, Logging}
 import umap.model.AddMarkerForm
-import umap.utils.CustomPlaywrightPage
+import umap.utils.{CustomPlaywrightPage, CustomPlaywrightPageFactory}
 
 import javax.inject.*
-import scala.jdk.CollectionConverters.*
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters.*
 
 @ImplementedBy(classOf[UmapServiceImpl])
 trait UmapService {
   def addMarker(form: AddMarkerForm)(implicit ec: ExecutionContext): Future[Unit]
+
   def getLayers(mapName: String)(implicit ec: ExecutionContext): Future[Seq[String]]
 }
 
 @Singleton
-  class UmapServiceImpl @Inject(val config: Configuration) extends UmapService with Logging {
-  override def addMarker(form: AddMarkerForm)(implicit ec: ExecutionContext): Future[Unit] = {
-    val customPlaywright = CustomPlaywrightPage.preparePage()
-    try {
-      implicit val page: Page = customPlaywright.page
-      val loginUrl = config.get[String]("umap.loginUrl")
-      logger.debug(s"going to login page $loginUrl")
-      page.navigate(loginUrl)
-      login()
-      logger.debug(s"going to map ${form.mapName}")
-      page.getByText(form.mapName).click()
-      page.locator("button").getByText("Edit").click()
-      createEmptyMarker()
-      putCoordinates(form.lat, form.long)
-      selectLayer(form.layer)
-      putDescription(form.description)
-      putGoogleLink(form.googleLink)
-      putName(form.name)
-      Thread.sleep(500)
-      save()
-      Thread.sleep(500)
-      Future(None)
-    } finally {
-      customPlaywright.close()
+class UmapServiceImpl @Inject(val config: Configuration, val playwrightFactory: CustomPlaywrightPageFactory) extends UmapService with Logging {
+  override def addMarker(form: AddMarkerForm)(implicit ec: ExecutionContext): Future[Unit] =
+    Future {
+      playwrightFactory.withPageRetry { implicit page =>
+        loginAddMarkerAndSave(form)
+      }
     }
+
+  private def loginAddMarkerAndSave(form: AddMarkerForm)(implicit ec: ExecutionContext, page: Page): Unit = {
+    val loginUrl = config.get[String]("umap.loginUrl")
+    logger.debug(s"going to login page $loginUrl")
+    page.navigate(loginUrl)
+    login()
+    logger.debug(s"going to map ${form.mapName}")
+    page.getByText(form.mapName).click()
+    page.locator("button").getByText("Edit").click()
+    createEmptyMarker()
+    putCoordinates(form.lat, form.longitude)
+    selectLayer(form.layer)
+    putDescription(form.description)
+    putGoogleLink(form.googleLink)
+    putName(form.name)
+    Thread.sleep(500)
+    save()
+    Thread.sleep(500)
   }
 
   private def putName(name: String)(implicit page: Page): Unit = {
@@ -101,7 +102,7 @@ trait UmapService {
   }
 
   def getLayers(mapName: String)(implicit ec: ExecutionContext): Future[Seq[String]] = Future {
-    val customPlaywright = CustomPlaywrightPage.preparePage()
+    val customPlaywright = playwrightFactory.preparePage()
     try {
       implicit val page: Page = customPlaywright.page
       page.navigate(config.get[String]("umap.loginUrl"))
