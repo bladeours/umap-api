@@ -18,8 +18,8 @@ class CustomPlaywrightPageFactory @javax.inject.Inject() (config: Configuration)
 
     val browser = playwright.chromium().launch(
       new BrowserType.LaunchOptions()
-//        .setHeadless(true)
-                .setHeadless(false)
+        .setHeadless(true)
+//                .setHeadless(false)
         .setSlowMo(50)
     )
 
@@ -50,7 +50,6 @@ class CustomPlaywrightPageFactory @javax.inject.Inject() (config: Configuration)
         case ex: TimeoutError =>
           lastError = Some(ex)
           if (retryCounter < retryMax) {
-            ex.printStackTrace()
             logger.debug(s"retrying... (max $retryMax, current $retryCounter)")
             retryCounter += 1
           } else {
