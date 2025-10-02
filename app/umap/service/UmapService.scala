@@ -53,16 +53,24 @@ class UmapServiceImpl @Inject(val config: Configuration, val playwrightFactory: 
 
   private def putGoogleLink(googleLink: String)(implicit page: Page): Unit = {
     if (!page.locator("input[name='google']").isVisible()) {
-      logger.debug("adding new field 'google'")
-      page.getByText("Add a new field").click()
-      page.locator("input[name='prompt']").fill("google")
-      page.getByText("OK").click()
+      addNewField("google")
     }
     logger.debug(s"putting google link in google field $googleLink")
     page.locator("input[name='google']").fill(googleLink)
   }
 
+  private def addNewField(fieldName: String)(implicit page: Page): Unit = {
+    logger.debug(s"adding new field '$fieldName'")
+    page.getByText("Add a new field").click()
+    page.locator("input[name='prompt']").fill(fieldName)
+    page.getByText("OK").click()
+  }
+
+
   private def putDescription(description: String)(implicit page: Page): Unit = {
+    if (!page.locator("textarea[name='description']").isVisible()) {
+      addNewField("description")
+    }
     logger.debug(s"putting description: $description")
     page.locator("textarea[name='description']").fill(description)
   }

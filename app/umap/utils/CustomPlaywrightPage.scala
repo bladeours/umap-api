@@ -1,7 +1,7 @@
 package umap.utils
 
 import com.microsoft.playwright.{Browser, BrowserType, Page, Playwright, TimeoutError}
-import play.api.Configuration
+import play.api.{Configuration, Logging}
 
 case class CustomPlaywrightPage(page: Page, playwright: Playwright, browser: Browser) {
   def close(): Unit = {
@@ -11,7 +11,7 @@ case class CustomPlaywrightPage(page: Page, playwright: Playwright, browser: Bro
   }
 }
 
-class CustomPlaywrightPageFactory @javax.inject.Inject() (config: Configuration) {
+class CustomPlaywrightPageFactory @javax.inject.Inject() (config: Configuration) extends Logging{
 
   def preparePage(): CustomPlaywrightPage = {
     val playwright = Playwright.create()
@@ -50,6 +50,7 @@ class CustomPlaywrightPageFactory @javax.inject.Inject() (config: Configuration)
         case ex: TimeoutError =>
           lastError = Some(ex)
           if (retryCounter < retryMax) {
+            logger.debug(s"retrying... (max $retryMax, current $retryCounter)")
             retryCounter += 1
           } else {
             throw ex
