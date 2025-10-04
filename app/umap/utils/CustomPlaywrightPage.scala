@@ -1,6 +1,7 @@
 package umap.utils
 
 import com.microsoft.playwright.*
+import com.microsoft.playwright.Page.CloseOptions
 import play.api.{Configuration, Logging}
 
 import java.io.File
@@ -11,6 +12,7 @@ import java.time.format.DateTimeFormatter
 case class CustomPlaywrightPage(page: Page, playwright: Playwright, browser: Browser, context: com.microsoft.playwright.BrowserContext) {
   def close(): Unit = {
     page.close()
+    page.video().delete()
     context.close() // ensure video is finalized
     browser.close()
     playwright.close()
@@ -63,9 +65,9 @@ class CustomPlaywrightPageFactory @javax.inject.Inject()(config: Configuration) 
       } catch {
         case ex: TimeoutError =>
           lastError = Some(ex)
-
           try {
             customPlaywright.page.close()
+            customPlaywright.page.video().delete()
             val target = new File(debugDir, s"timeout_retry${retryCounter}_$timestamp.webm")
             customPlaywright.page.video().saveAs(Path.of(target.getAbsolutePath))
             logger.warn(s"Saved video for retry $retryCounter at: ${target.getAbsolutePath}")
@@ -73,7 +75,6 @@ class CustomPlaywrightPageFactory @javax.inject.Inject()(config: Configuration) 
             case saveEx: Throwable =>
               logger.error("Failed to save video", saveEx)
           }
-
           if (retryCounter < retryMax) {
             logger.debug(s"TimeoutError, retrying... (max $retryMax, current $retryCounter)")
             retryCounter += 1
@@ -86,5 +87,10 @@ class CustomPlaywrightPageFactory @javax.inject.Inject()(config: Configuration) 
     }
 
     throw lastError.getOrElse(new RuntimeException("Unknown Playwright failure"))
+  }
+
+  private def closePageAndDeleteVideo(page: Page) :Unit = {
+    page.close()
+    new File(page.video().path().toUri).delete()
   }
 }
