@@ -10,6 +10,7 @@ scalaVersion := "3.7.2"
 libraryDependencies += guice
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.0" % Test
 libraryDependencies += "com.microsoft.playwright" % "playwright" % "1.40.0"
+libraryDependencies += "com.google.openlocationcode" % "openlocationcode" % "1.0.4"
 
 
 Docker / daemonUserUid  := Some("1000")
