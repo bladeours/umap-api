@@ -66,7 +66,6 @@ class UmapServiceImpl @Inject(val config: Configuration, val playwrightFactory: 
     logger.debug(s"adding new field '$fieldName'")
     page.getByText("Add a new field").click()
     page.locator("input[name='prompt']").fill(fieldName)
-//    Thread.sleep("10000")
     page.locator("input[name='prompt']").locator("..").locator("..").locator("..").getByText("OK").click()
   }
 
@@ -109,7 +108,7 @@ class UmapServiceImpl @Inject(val config: Configuration, val playwrightFactory: 
   }
 
   private def save()(implicit page: Page): Unit = {
-    page.locator("button").getByText("Save draft").click()
+    page.locator("span[data-ref='saveLabel']").click()
     logger.debug("saved correctly")
   }
 
