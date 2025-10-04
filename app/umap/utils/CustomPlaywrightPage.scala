@@ -25,7 +25,7 @@ class CustomPlaywrightPageFactory @javax.inject.Inject()(config: Configuration) 
   if (!debugDir.exists()) debugDir.mkdirs()
 
   private def timestamp: String =
-    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss_SSS"))
+    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
 
   def preparePage(): CustomPlaywrightPage = {
     val playwright = Playwright.create()
@@ -40,7 +40,6 @@ class CustomPlaywrightPageFactory @javax.inject.Inject()(config: Configuration) 
       new Browser.NewContextOptions()
         .setLocale("en-GB")
         .setRecordVideoDir(Path.of(debugDir.getAbsolutePath))
-        .setRecordVideoSize(1920, 1080)
     )
 
     val page = context.newPage()
@@ -67,8 +66,7 @@ class CustomPlaywrightPageFactory @javax.inject.Inject()(config: Configuration) 
           lastError = Some(ex)
           try {
             customPlaywright.page.close()
-            customPlaywright.page.video().delete()
-            val target = new File(debugDir, s"timeout_retry${retryCounter}_$timestamp.webm")
+            val target = new File(debugDir, s"${timestamp}_retry_$retryCounter.webm")
             customPlaywright.page.video().saveAs(Path.of(target.getAbsolutePath))
             logger.warn(s"Saved video for retry $retryCounter at: ${target.getAbsolutePath}")
           } catch {
