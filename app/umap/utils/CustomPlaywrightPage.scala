@@ -63,9 +63,10 @@ class CustomPlaywrightPageFactory @javax.inject.Inject()(config: Configuration) 
       } catch {
         case ex: TimeoutError =>
           lastError = Some(ex)
+
           try {
-            val videoPath = customPlaywright.page.video().path()
-            val target = new File(debugDir, s"${timestamp}_timeout_retry${retryCounter}.webm")
+            customPlaywright.page.close()
+            val target = new File(debugDir, s"timeout_retry${retryCounter}_$timestamp.webm")
             customPlaywright.page.video().saveAs(Path.of(target.getAbsolutePath))
             logger.warn(s"Saved video for retry $retryCounter at: ${target.getAbsolutePath}")
           } catch {
