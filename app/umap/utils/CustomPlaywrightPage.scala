@@ -1,6 +1,6 @@
 package umap.utils
 
-import com.microsoft.playwright.{Browser, BrowserType, Page, Playwright, TimeoutError}
+import com.microsoft.playwright.*
 import play.api.{Configuration, Logging}
 
 import java.io.File
@@ -8,29 +8,25 @@ import java.nio.file.Path
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-case class CustomPlaywrightPage(page: Page, playwright: Playwright, browser: Browser) {
+case class CustomPlaywrightPage(page: Page, playwright: Playwright, browser: Browser, context: com.microsoft.playwright.BrowserContext) {
   def close(): Unit = {
-    this.page.close()
-    this.browser.close()
-    this.playwright.close()
+    page.close()
+    context.close() // ensure video is finalized
+    browser.close()
+    playwright.close()
   }
 }
 
-class CustomPlaywrightPageFactory @javax.inject.Inject() (config: Configuration) extends Logging {
+class CustomPlaywrightPageFactory @javax.inject.Inject()(config: Configuration) extends Logging {
 
   private val debugDir = new File("debug")
   if (!debugDir.exists()) debugDir.mkdirs()
 
-  private def saveScreenshot(page: Page, prefix: String = "error"): Unit = {
-    val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss_SSS"))
-    val file = new File(debugDir, s"${prefix}_$timestamp.png")
-    page.screenshot(new Page.ScreenshotOptions().setPath(Path.of(file.getAbsolutePath)))
-    logger.warn(s"Saved screenshot to ${file.getAbsolutePath}")
-  }
+  private def timestamp: String =
+    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss_SSS"))
 
   def preparePage(): CustomPlaywrightPage = {
     val playwright = Playwright.create()
-
     val browser = playwright.chromium().launch(
       new BrowserType.LaunchOptions()
         .setHeadless(true)
@@ -41,12 +37,15 @@ class CustomPlaywrightPageFactory @javax.inject.Inject() (config: Configuration)
     val context = browser.newContext(
       new Browser.NewContextOptions()
         .setLocale("en-GB")
+        .setRecordVideoDir(Path.of(debugDir.getAbsolutePath))
+        .setRecordVideoSize(1920, 1080)
     )
 
     val page = context.newPage()
     page.setViewportSize(1920, 1080)
     page.setDefaultTimeout(config.get[Int]("playwright.timeoutS") * 1000)
-    CustomPlaywrightPage(page, playwright, browser)
+
+    CustomPlaywrightPage(page, playwright, browser, context)
   }
 
   def withPageRetry[T](block: Page => T): T = {
@@ -64,7 +63,16 @@ class CustomPlaywrightPageFactory @javax.inject.Inject() (config: Configuration)
       } catch {
         case ex: TimeoutError =>
           lastError = Some(ex)
-          saveScreenshot(customPlaywright.page, s"timeout_retry$retryCounter")
+          try {
+            val videoPath = customPlaywright.page.video().path()
+            val target = new File(debugDir, s"${timestamp}_timeout_retry${retryCounter}.webm")
+            customPlaywright.page.video().saveAs(Path.of(target.getAbsolutePath))
+            logger.warn(s"Saved video for retry $retryCounter at: ${target.getAbsolutePath}")
+          } catch {
+            case saveEx: Throwable =>
+              logger.error("Failed to save video", saveEx)
+          }
+
           if (retryCounter < retryMax) {
             logger.debug(s"TimeoutError, retrying... (max $retryMax, current $retryCounter)")
             retryCounter += 1
