@@ -3,6 +3,7 @@ package umap.service
 import com.google.inject.ImplementedBy
 import com.google.openlocationcode.OpenLocationCode
 import com.microsoft.playwright.*
+import com.microsoft.playwright.options.LoadState
 import play.api.{Configuration, Logging}
 import umap.model.GoogleDetails
 import umap.utils.CustomPlaywrightPageFactory
@@ -32,6 +33,7 @@ class GoogleServiceImpl @Inject(val config: Configuration, val playwrightFactory
     page.navigate(url)
     logger.debug("rejecting cookies")
     page.locator("button[aria-label='Reject all']").all().get(0).click()
+    page.waitForLoadState(LoadState.NETWORKIDLE)
     val (lat, long) = getCoordinates(page, url)
     val shareUrl = getShareUrl(page)
     logger.debug("finished getting info from google page")
