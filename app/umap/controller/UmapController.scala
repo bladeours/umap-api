@@ -24,7 +24,7 @@ class UmapController @Inject()(val controllerComponents: ControllerComponents,
             ex.printStackTrace()
             InternalServerError(Json.obj(
               "status" -> "error",
-              "message" -> "Failed to add marker"
+              "message" -> ex.getMessage
             ))
         }
     )
@@ -43,7 +43,7 @@ class UmapController @Inject()(val controllerComponents: ControllerComponents,
             ex.printStackTrace()
             InternalServerError(Json.obj(
               "status" -> "error",
-              "message" -> "Failed to add marker from Google"
+              "message" -> ex.getMessage
             ))
         }
     )
@@ -59,7 +59,7 @@ class UmapController @Inject()(val controllerComponents: ControllerComponents,
       ex.printStackTrace()
       InternalServerError(Json.obj(
         "status" -> "error",
-        "message" -> "Failed to fetch events"
+        "message" -> ex.getMessage
       ))
   }
   }
