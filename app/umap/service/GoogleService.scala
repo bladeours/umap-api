@@ -49,6 +49,7 @@ class GoogleServiceImpl @Inject(val config: Configuration, val playwrightFactory
     if (coordinates.exists(c => c.contains(","))) {
       return coordinates.map(c => {
         val split = c.replace(" ", "").split(",")
+        logger.debug(s"using coordinates from parameters: ${split(0)}, ${split(1)}")
         (split(0), split(1))
       }).get
     }
