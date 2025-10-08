@@ -36,7 +36,7 @@ class UmapController @Inject()(val controllerComponents: ControllerComponents,
       errors => Future.successful(BadRequest(Json.obj("error" -> JsError.toJson(errors)))),
       form =>
         (for {
-          googleDetails <- googleService.getDetailsFromGoogle(form.url)
+          googleDetails <- googleService.getDetailsFromGoogle(form.url, form.coordinates)
           _ <- umapService.addMarker(AddMarkerForm.of(googleDetails, form))
         } yield Ok).recover {
           case ex: Exception =>
