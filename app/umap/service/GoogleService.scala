@@ -64,6 +64,7 @@ class GoogleServiceImpl @Inject(val config: Configuration, val playwrightFactory
 
   private def getShareUrl(page: Page): String = {
     logger.debug("get share url")
+    Thread.sleep(1000)
     page.getByLabel("Share", new Page.GetByLabelOptions().setExact(true)).click()
     page.locator("input[value*='maps.app.goo.gl']").inputValue()
   }
