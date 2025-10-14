@@ -8,3 +8,5 @@ target
 /.settings
 /RUNNING_PID
 *.dev.conf
+*.webm
+public/images/*
