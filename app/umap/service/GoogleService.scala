@@ -56,6 +56,7 @@ class GoogleServiceImpl @Inject(val config: Configuration, val playwrightFactory
     val (lat, long) = getCoordinatesFromUrl(url)
     logger.debug("getting coordinates from open location code")
     val pattern = "([23456789CFGHJMPQRVWX]{2,8}\\+[23456789CFGHJMPQRVWX]{2,8})"
+    page.getByText(Pattern.compile(pattern)).waitFor()
     val code = page.getByText(Pattern.compile(pattern)).all().get(0).textContent()
     logger.debug(s"found code: $code")
     val decodedCode = new OpenLocationCode(code.split(" ")(0).replace(",", "")).recover(lat.toDouble, long.toDouble).decode()
